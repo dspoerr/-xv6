@@ -306,7 +306,7 @@ copyuvm(pde_t *pgdir, uint sz)
 
   if((d = setupkvm()) == 0)
     return 0;
-  for(i = 0; i < USERTOP; i += PGSIZE){
+  for(i = 0; i < sz; i += PGSIZE){
     if((pte = walkpgdir(pgdir, (void*)i, 0)) == 0)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))
@@ -387,8 +387,7 @@ void shmeminit(void) {
 }
 
 void* shmem_access(int pgNum) {
-   void* la;
-   int procPages = proc->sharedPageCount; 
+   void* la; 
 
    if (pgNum < 0 || pgNum > 3) {
       return NULL;
@@ -398,9 +397,11 @@ void* shmem_access(int pgNum) {
    {
       return (void*)(proc->sharedPagesUsed[pgNum]);
    }
-   la = (void*)(USERTOP - (procPages+1) * PGSIZE);
+   la = (void*)(USERTOP - (proc->sharedPageCount+1) * PGSIZE);
+   cprintf("MAPPING AT: %p\n", shmem_addr[pgNum]);
+   cprintf("MAPPING WITH: %p\n", la);
    mappages(proc->pgdir, la, PGSIZE, (unsigned int)shmem_addr[pgNum], PTE_W | PTE_U);
-   procPages = procPages + 1;
+   proc->sharedPageCount = proc->sharedPageCount + 1;
    proc->sharedPagesUsed[pgNum] = (int)la;
    shmem_count[pgNum] = shmem_count[pgNum] + 1; 
    return la;
