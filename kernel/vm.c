@@ -270,7 +270,9 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       pa = PTE_ADDR(*pte);
       if(pa == 0)
         panic("kfree");
-      kfree((char*)pa);
+      if(pa != 16650240 && pa != 16646144 && pa != 16642048 && pa != 16637952) {
+         kfree((char*)pa);
+      }
       *pte = 0;
     }
   }
@@ -374,6 +376,7 @@ void shmeminit(void) {
    cprintf("shmeminit\n");
    // init shmem structs
    int i;
+
    for (i=0; i < SHMEM_PAGES; i++) {
       shmem_count[i] = 0;
       if ((shmem_addr[i] = kalloc()) == 0)
@@ -387,18 +390,21 @@ void shmeminit(void) {
 }
 
 void* shmem_access(int pgNum) {
-   void* la; 
-
+   void* la;
+   int j;
+   cprintf("Page Count: %d", proc->sharedPageCount);
    if (pgNum < 0 || pgNum > 3) {
       return NULL;
    }
-
+   for(j = 0; j<4; j++) {
+      cprintf("SHARED PAGE USAGE: %d\n", proc->sharedPagesUsed[j]);
+   }
    if (proc->sharedPagesUsed[pgNum] != 0)
    {
+      cprintf("PAGE ALREADY FOUND!! \n");
       return (void*)(proc->sharedPagesUsed[pgNum]);
    }
    la = (void*)(USERTOP - (proc->sharedPageCount+1) * PGSIZE);
-   cprintf("MAPPING AT: %p\n", shmem_addr[pgNum]);
    cprintf("MAPPING WITH: %p\n", la);
    mappages(proc->pgdir, la, PGSIZE, (unsigned int)shmem_addr[pgNum], PTE_W | PTE_U);
    proc->sharedPageCount = proc->sharedPageCount + 1;
