@@ -320,6 +320,20 @@ copyuvm(pde_t *pgdir, uint sz)
     if(mappages(d, (void*)i, PGSIZE, PADDR(mem), PTE_W|PTE_U) < 0)
       goto bad;
   }
+
+  for(i = USERTOP - PGSIZE; i > (USERTOP - 4 * PGSIZE); i -= PGSIZE){
+      pte = walkpgdir(pgdir, (void*)i, 0); 
+      cprintf("CURRENT PTE: %p\n", pte);
+      cprintf("PTE POINTING TO (CPVM): %p\n", PGROUNDDOWN(*pte));
+    if(PGROUNDDOWN(pte) != 0 && (*pte & PTE_P)) {
+       cprintf("COPYING PARENT PAGE. PTE = %p\n",pte);
+       pa = PTE_ADDR(*pte);
+       cprintf("PHYSICAL POINTER: %p\n", pa);
+       if(mappages(d, (void*)i, PGSIZE, (unsigned int)PGROUNDDOWN(*pte), PTE_W|PTE_U) < 0)
+         goto bad;
+    }
+  }
+
   return d;
 
 bad:
@@ -391,25 +405,39 @@ void shmeminit(void) {
 
 void* shmem_access(int pgNum) {
    void* la;
-   int j;
+   int i;
+   pte_t *pte;
+
    cprintf("Page Count: %d", proc->sharedPageCount);
    if (pgNum < 0 || pgNum > 3) {
       return NULL;
    }
-   for(j = 0; j<4; j++) {
-      cprintf("SHARED PAGE USAGE: %d\n", proc->sharedPagesUsed[j]);
-   }
-   if (proc->sharedPagesUsed[pgNum] != 0)
-   {
-      cprintf("PAGE ALREADY FOUND!! \n");
-      return (void*)(proc->sharedPagesUsed[pgNum]);
-   }
+//   for(j = 0; j<4; j++) {
+//      cprintf("SHARED PAGE USAGE: %d\n", proc->sharedPagesUsed[j]);
+//   }
+//   if (proc->sharedPagesUsed[pgNum] != 0)
+//   {
+//      cprintf("PAGE ALREADY FOUND!! \n");
+//      return (void*)(proc->sharedPagesUsed[pgNum]);
+//   }
+
+  for(i = (USERTOP - 4 * PGSIZE); i < USERTOP; i += PGSIZE){
+      pte = walkpgdir(proc->pgdir, (void*)i, 0); 
+      cprintf("SHMEM PTE: %p\n", pte);
+      cprintf("SHMEM POINTING TO: %p\n", PGROUNDDOWN(*pte));
+    if(PGROUNDDOWN(*pte) == shmem_addr[pgNum] && (*pte & PTE_P)) {
+        cprintf("PAGE ALREADY FOUND!! \n");
+        return (void*) i;
+
+    }
+  }
+
    la = (void*)(USERTOP - (proc->sharedPageCount+1) * PGSIZE);
    cprintf("MAPPING WITH: %p\n", la);
    mappages(proc->pgdir, la, PGSIZE, (unsigned int)shmem_addr[pgNum], PTE_W | PTE_U);
    proc->sharedPageCount = proc->sharedPageCount + 1;
    proc->sharedPagesUsed[pgNum] = (int)la;
-   shmem_count[pgNum] = shmem_count[pgNum] + 1; 
+   shmem_count[pgNum] = shmem_count[pgNum] + 1;
    return la;
 }
 
