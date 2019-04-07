@@ -26,6 +26,7 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 void* shmem_access(int pgNum);
+int shmem_count(int pgNum);
 
 // user library functions (ulib.c)
 int stat(char*, struct stat*);

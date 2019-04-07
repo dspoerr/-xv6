@@ -99,3 +99,12 @@ sys_shmem_access (void)
    return (int)(shmem_access(pgNum));
 }
 
+int
+sys_shmem_count (void)
+{
+   int pgNum;
+
+   if(argint(0, &pgNum) < 0)
+      return -1;
+   return (shmem_count(pgNum));
+}

@@ -230,6 +230,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 {
   char *mem;
   uint a;
+  pte_t *pte;
 
   if(newsz > USERTOP)
     return 0;
@@ -238,14 +239,19 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 
   a = PGROUNDUP(oldsz);
   for(; a < newsz; a += PGSIZE){
-    mem = kalloc();
-    if(mem == 0){
-      cprintf("allocuvm out of memory\n");
-      deallocuvm(pgdir, newsz, oldsz);
-      return 0;
-    }
-    memset(mem, 0, PGSIZE);
-    mappages(pgdir, (char*)a, PGSIZE, PADDR(mem), PTE_W|PTE_U);
+     pte = walkpgdir(pgdir, (void*)a, 0);
+     if(*pte == 0) {
+       mem = kalloc();
+       if(mem == 0){
+          cprintf("allocuvm out of memory\n");
+          deallocuvm(pgdir, newsz, oldsz);
+          return 0;
+       }
+       memset(mem, 0, PGSIZE);
+       mappages(pgdir, (char*)a, PGSIZE, PADDR(mem), PTE_W|PTE_U);
+     } else { 
+        return 0;
+     }
   }
   return newsz;
 }
@@ -383,7 +389,7 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
 
 //initalizes shared memory physical addresses
 #define SHMEM_PAGES (4)
-int shmem_count[SHMEM_PAGES];
+int shmem_countarr[SHMEM_PAGES];
 void *shmem_addr[SHMEM_PAGES];
 
 void shmeminit(void) {
@@ -392,7 +398,7 @@ void shmeminit(void) {
    int i;
 
    for (i=0; i < SHMEM_PAGES; i++) {
-      shmem_count[i] = 0;
+      shmem_countarr[i] = 0;
       if ((shmem_addr[i] = kalloc()) == 0)
          panic("shmeminit failed.");
       cprintf("%x\n", (unsigned int) shmem_addr[i]);
@@ -403,6 +409,28 @@ void shmeminit(void) {
    }
 }
 
+int shmem_count(int pgNum) {
+   if (pgNum < 0 || pgNum > 3) {
+      return -1;
+   }
+   return shmem_countarr[pgNum];
+}
+
+void inc_shmem_count(int inc, pde_t *pgdir) {
+   int i, j;
+   pte_t *pte;
+  cprintf("DEINC SHMEM \n");
+  for(j = 0; j<4; j++)  {
+    for(i = (USERTOP - 4 * PGSIZE); i < USERTOP; i += PGSIZE){
+        pte = walkpgdir(pgdir, (void*)i, 0); 
+      if(PGROUNDDOWN(*pte) == shmem_addr[j] && (*pte & PTE_P)) {
+         shmem_countarr[j] = shmem_countarr[j] - 1;
+      }
+    }
+  }
+
+}
+
 void* shmem_access(int pgNum) {
    void* la;
    int i;
@@ -410,7 +438,7 @@ void* shmem_access(int pgNum) {
 
    cprintf("Page Count: %d", proc->sharedPageCount);
    if (pgNum < 0 || pgNum > 3) {
-      return NULL;
+      return (void*) NULL;
    }
 //   for(j = 0; j<4; j++) {
 //      cprintf("SHARED PAGE USAGE: %d\n", proc->sharedPagesUsed[j]);
@@ -431,13 +459,17 @@ void* shmem_access(int pgNum) {
 
     }
   }
-
+   // might be an issue for fork overwriting
    la = (void*)(USERTOP - (proc->sharedPageCount+1) * PGSIZE);
+   if (proc->sz > (int) la) {
+      return NULL;
+   }
+   cprintf("PGCOUNT: %d\n", shmem_countarr[pgNum]);
    cprintf("MAPPING WITH: %p\n", la);
    mappages(proc->pgdir, la, PGSIZE, (unsigned int)shmem_addr[pgNum], PTE_W | PTE_U);
    proc->sharedPageCount = proc->sharedPageCount + 1;
    proc->sharedPagesUsed[pgNum] = (int)la;
-   shmem_count[pgNum] = shmem_count[pgNum] + 1;
+   shmem_countarr[pgNum] = shmem_countarr[pgNum] + 1;
    return la;
 }
 
