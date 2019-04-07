@@ -270,18 +270,22 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     return oldsz;
 
   a = PGROUNDUP(newsz);
+  inc_shmem_count(-1, pgdir);
   for(; a  < oldsz; a += PGSIZE){
     pte = walkpgdir(pgdir, (char*)a, 0);
     if(pte && (*pte & PTE_P) != 0){
       pa = PTE_ADDR(*pte);
-      if(pa == 0)
+      if(pa == 0) {
+        cprintf("UH OH, WE IN VM HEHE\n");
         panic("kfree");
+      }
       if(pa != 16650240 && pa != 16646144 && pa != 16642048 && pa != 16637952) {
          kfree((char*)pa);
       }
       *pte = 0;
     }
   }
+  inc_shmem_count(-1, pgdir);
   return newsz;
 }
 
@@ -339,7 +343,7 @@ copyuvm(pde_t *pgdir, uint sz)
          goto bad;
     }
   }
-
+  inc_shmem_count(1,pgdir);
   return d;
 
 bad:
@@ -419,16 +423,16 @@ int shmem_count(int pgNum) {
 void inc_shmem_count(int inc, pde_t *pgdir) {
    int i, j;
    pte_t *pte;
-  cprintf("DEINC SHMEM \n");
-  for(j = 0; j<4; j++)  {
-    for(i = (USERTOP - 4 * PGSIZE); i < USERTOP; i += PGSIZE){
-        pte = walkpgdir(pgdir, (void*)i, 0); 
-      if(PGROUNDDOWN(*pte) == shmem_addr[j] && (*pte & PTE_P)) {
-         shmem_countarr[j] = shmem_countarr[j] - 1;
+   for(i = (USERTOP - 4 * PGSIZE); i < USERTOP; i += PGSIZE){
+      pte = walkpgdir(pgdir, (void*)i, 0);
+      for (j = 0; j<4; j++) { 
+        if(PGROUNDDOWN(*pte) == shmem_addr[j] && (*pte & PTE_P)) {
+           cprintf("INC PAGECOUNT BY!!! %d\n",inc);
+           cprintf("PGNUM INCREMENTING!! %d\n", j);
+           shmem_countarr[j] = shmem_countarr[j] + inc;
+        }
       }
-    }
-  }
-
+   }
 }
 
 void* shmem_access(int pgNum) {
@@ -464,12 +468,12 @@ void* shmem_access(int pgNum) {
    if (proc->sz > (int) la) {
       return NULL;
    }
-   cprintf("PGCOUNT: %d\n", shmem_countarr[pgNum]);
    cprintf("MAPPING WITH: %p\n", la);
    mappages(proc->pgdir, la, PGSIZE, (unsigned int)shmem_addr[pgNum], PTE_W | PTE_U);
    proc->sharedPageCount = proc->sharedPageCount + 1;
    proc->sharedPagesUsed[pgNum] = (int)la;
    shmem_countarr[pgNum] = shmem_countarr[pgNum] + 1;
+   cprintf("INC PAGECOUNT BY 1: :) : %d\n", shmem_countarr[pgNum]);
    return la;
 }
 

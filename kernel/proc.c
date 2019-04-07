@@ -184,8 +184,6 @@ exit(void)
     }
   }
 
-  inc_shmem_count(-1, proc->pgdir);
-
   iput(proc->cwd);
   proc->cwd = 0;
 
