@@ -285,7 +285,6 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       *pte = 0;
     }
   }
-  inc_shmem_count(-1, pgdir);
   return newsz;
 }
 
