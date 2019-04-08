@@ -330,7 +330,7 @@ copyuvm(pde_t *pgdir, uint sz)
       goto bad;
   }
 
-  for(i = USERTOP - PGSIZE; i > (USERTOP - 4 * PGSIZE); i -= PGSIZE){
+  for(i = USERTOP - PGSIZE; i >= (USERTOP - 4 * PGSIZE); i -= PGSIZE){
       pte = walkpgdir(pgdir, (void*)i, 0); 
       cprintf("CURRENT PTE: %p\n", pte);
       cprintf("PTE POINTING TO (CPVM): %p\n", PGROUNDDOWN(*pte));
