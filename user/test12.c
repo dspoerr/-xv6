@@ -25,6 +25,7 @@ int main()
 		*(ptr+i) = arr[i];
 	// argstr
 	int fd = open(ptr, O_WRONLY|O_CREATE);
+        printf(1, "CHECKING argstr :) \n");
 	if(fd == -1)
 	{
 		printf(1, "open system call failed to take a string from within a shared page\n");
@@ -33,6 +34,7 @@ int main()
 		exit();
 	}
 	//argptr
+        printf(1, "CHECKING argptr :) \n");
 	int n = write(fd, ptr, 10);
 	if(n == -1)
 	{
@@ -41,6 +43,7 @@ int main()
 		printf(1, "TEST FAILED");
 		exit();
 	}
+        printf(1, "checking invalid string :) \n");
 	// making sure invalid strings are still caught
 	int fd2 = open((char *)(USERTOP/2), O_WRONLY|O_CREATE);
 	if(fd2 != -1)
@@ -52,6 +55,7 @@ int main()
 	}
 	// making sure invalid pointers are still caught
 	n = write(fd, (char *)(USERTOP/2), 10);
+        printf(1, "CHECKING INVALID POINTER :) \n");
 	if(n != -1)
 	{
 		printf(1, "write system call successfully accepted an ivalid pointer\n");
@@ -60,6 +64,7 @@ int main()
 		exit();
 	}
 	// make sure edge case is checked.
+        printf(1, "CHECKING EDGE CASE :) \n");
 	n = write(fd, (char *)(ptr + 4094), 10);
 	if(n != -1)
 	{
@@ -68,6 +73,7 @@ int main()
 		printf(1, "TEST FAILED");
 		exit();
 	}
+        printf(1, "TEST12 ?? hello...");
 	printf(1, "%s TEST PASSED\n", __FILE__);
 	exit();
 }

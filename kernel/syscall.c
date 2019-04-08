@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "syscall.h"
 #include "sysfunc.h"
+#include "defs.h"
 
 // User code makes a system call with INT T_SYSCALL.
 // System call number in %eax.
@@ -17,8 +18,9 @@
 int
 fetchint(struct proc *p, uint addr, int *ip)
 {
-  if((addr >= p->sz || addr+4 > p->sz) && (addr < USERTOP - 4 * PGSIZE || addr > USERTOP))
+  if((addr >= p->sz || addr+4 > p->sz)) {
     return -1;
+  }
   *ip = *(int*)(addr);
   return 0;
 }
@@ -31,13 +33,26 @@ fetchstr(struct proc *p, uint addr, char **pp)
 {
   char *s, *ep;
 
-  if(addr >= p->sz && (addr < USERTOP - 4 * PGSIZE || addr > USERTOP) )
-    return -1;
+  if(addr >= p->sz && (addr < USERTOP - 4 * PGSIZE || addr > USERTOP)) {
+          cprintf("FETCH str CALL FAILURE! \n");
+          return -1;
+  }
   *pp = (char*)addr;
-  ep = (char*)p->sz;
-  for(s = *pp; s < ep; s++)
-    if(*s == 0)
+  if(addr > USERTOP - 4 * PGSIZE) {
+     ep = (char*)USERTOP;
+  } else {
+     ep = (char*)p->sz;
+  }
+  cprintf("STARTING FOR LOOP...");
+  cprintf("INSIDE FOR LOOP. VALUE OF PP AND EP... %p AND %p...", *pp, ep);
+  for(s = *pp; s < ep; s++) {
+    if(*s == 0) {
+      cprintf("FETCH STR CALL RETURNING !! \n");
       return s - *pp;
+    }
+    cprintf("ITERATING FETCHSTR LOOP...");
+  }
+  cprintf("RETURNING = -1 !!!\n");
   return -1;
 }
 
@@ -56,10 +71,19 @@ argptr(int n, char **pp, int size)
 {
   int i;
   
-  if(argint(n, &i) < 0)
-    return -1;
-  if(((uint)i >= proc->sz || (uint)i+size > proc->sz) && ((uint)i < USERTOP - 4 * PGSIZE || (uint)i > USERTOP))
-    return -1;
+  if(argint(n, &i) < 0) {
+     cprintf("ARGPTR 1 FAILED \n");
+     return -1;
+  }
+  if(((uint)i >= proc->sz || (uint)i+size > proc->sz) && ((uint)i < USERTOP - 4 * PGSIZE || (uint)i > USERTOP)) {
+     cprintf("I IS ... %d AND PROC SZ IS ... %d proc->sz ...");
+     cprintf("ARGPTR 2 FAILED \n");
+     return -1;
+  }
+ // cprintf("pp equal %d\n", (int)*pp);
+  if ((int)*pp > USERTOP - PGSIZE) {
+     return -1;
+  }
   *pp = (char*)i;
   return 0;
 }
@@ -72,8 +96,10 @@ int
 argstr(int n, char **pp)
 {
   int addr;
-  if(argint(n, &addr) < 0)
+  if(argint(n, &addr) < 0) {
+    cprintf("ARGINT CALL FAILUER \n");
     return -1;
+  }
   return fetchstr(proc, addr, pp);
 }
 

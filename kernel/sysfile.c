@@ -77,8 +77,10 @@ sys_write(void)
   int n;
   char *p;
 
-  if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0)
+  if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0) {
+    cprintf("UH OH, RETURNING -1 !!! IN WRITE \n");
     return -1;
+  }
   return filewrite(f, p, n);
 }
 
@@ -262,14 +264,21 @@ sys_open(void)
   struct file *f;
   struct inode *ip;
 
-  if(argstr(0, &path) < 0 || argint(1, &omode) < 0)
+  if(argstr(0, &path) < 0 || argint(1, &omode) < 0) {
+    cprintf("OPEN 1 FAILURE %d\n", (argstr(0, &path)));
+    cprintf("CHECKING...%d\n", (argint(1, &omode)));
     return -1;
+  }
   if(omode & O_CREATE){
-    if((ip = create(path, T_FILE, 0, 0)) == 0)
+    if((ip = create(path, T_FILE, 0, 0)) == 0) {
+      cprintf("OPEN 2 FAILURE \n");
       return -1;
+    }
   } else {
-    if((ip = namei(path)) == 0)
+    if((ip = namei(path)) == 0) {
+      cprintf("OPEN 3 FAILURE \n");
       return -1;
+    }
     ilock(ip);
     if(ip->type == T_DIR && omode != O_RDONLY){
       iunlockput(ip);
