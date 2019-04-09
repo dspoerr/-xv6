@@ -330,14 +330,12 @@ copyuvm(pde_t *pgdir, uint sz)
       goto bad;
   }
 
+  //additional for loop to catch any shmem pages in proc page table
+  //manual check using walkpgdir, also calls shmem_count for changes made
   for(i = USERTOP - PGSIZE; i >= (USERTOP - 4 * PGSIZE); i -= PGSIZE){
-      pte = walkpgdir(pgdir, (void*)i, 0); 
-      cprintf("CURRENT PTE: %p\n", pte);
-      cprintf("PTE POINTING TO (CPVM): %p\n", PGROUNDDOWN(*pte));
+      pte = walkpgdir(pgdir, (void*)i, 0);
     if(PGROUNDDOWN(pte) != 0 && (*pte & PTE_P)) {
-       cprintf("COPYING PARENT PAGE. PTE = %p\n",pte);
        pa = PTE_ADDR(*pte);
-       cprintf("PHYSICAL POINTER: %p\n", pa);
        if(mappages(d, (void*)i, PGSIZE, (unsigned int)PGROUNDDOWN(*pte), PTE_W|PTE_U) < 0)
          goto bad;
     }
@@ -419,6 +417,10 @@ int shmem_count(int pgNum) {
    return shmem_countarr[pgNum];
 }
 
+//given a pgdir and increment (-1 or 1), iterates through page table
+//for every page that matches shmem page, increment by inc
+//this is only called when pages are copied or destroyed
+//in dealloc or copyuvm. shmem_access also increments counter
 void inc_shmem_count(int inc, pde_t *pgdir) {
    int i, j;
    pte_t *pte;
@@ -426,8 +428,6 @@ void inc_shmem_count(int inc, pde_t *pgdir) {
       pte = walkpgdir(pgdir, (void*)i, 0);
       for (j = 0; j<4; j++) { 
         if(PGROUNDDOWN(*pte) == shmem_addr[j] && (*pte & PTE_P)) {
-           cprintf("INC PAGECOUNT BY!!! %d\n",inc);
-           cprintf("PGNUM INCREMENTING!! %d\n", j);
            shmem_countarr[j] = shmem_countarr[j] + inc;
         }
       }
@@ -439,40 +439,31 @@ void* shmem_access(int pgNum) {
    int i;
    pte_t *pte;
 
-   cprintf("Page Count: %d", proc->sharedPageCount);
+   //catches any arg outside of shmem array index
    if (pgNum < 0 || pgNum > 3) {
       return (void*) NULL;
    }
-//   for(j = 0; j<4; j++) {
-//      cprintf("SHARED PAGE USAGE: %d\n", proc->sharedPagesUsed[j]);
-//   }
-//   if (proc->sharedPagesUsed[pgNum] != 0)
-//   {
-//      cprintf("PAGE ALREADY FOUND!! \n");
-//      return (void*)(proc->sharedPagesUsed[pgNum]);
-//   }
 
+  //checks if there is a pointer in the page table referencing
+  //the physical address of the shared pages
+  //if yes, return virtual address
   for(i = (USERTOP - 4 * PGSIZE); i < USERTOP; i += PGSIZE){
-      pte = walkpgdir(proc->pgdir, (void*)i, 0); 
-      cprintf("SHMEM PTE: %p\n", pte);
-      cprintf("SHMEM POINTING TO: %p\n", PGROUNDDOWN(*pte));
+      pte = walkpgdir(proc->pgdir, (void*)i, 0);
     if(PGROUNDDOWN(*pte) == shmem_addr[pgNum] && (*pte & PTE_P)) {
-        cprintf("PAGE ALREADY FOUND!! \n");
         return (void*) i;
-
     }
   }
-   // might be an issue for fork overwriting
+
+   //catches a process calling shmem_access whose vm is full
    la = (void*)(USERTOP - (proc->sharedPageCount+1) * PGSIZE);
    if (proc->sz > (int) la) {
       return NULL;
    }
-   cprintf("MAPPING WITH: %p\n", la);
+
+   //maps pages and increments counter + proc counter
    mappages(proc->pgdir, la, PGSIZE, (unsigned int)shmem_addr[pgNum], PTE_W | PTE_U);
    proc->sharedPageCount = proc->sharedPageCount + 1;
-   proc->sharedPagesUsed[pgNum] = (int)la;
    shmem_countarr[pgNum] = shmem_countarr[pgNum] + 1;
-   cprintf("INC PAGECOUNT BY 1: :) : %d\n", shmem_countarr[pgNum]);
    return la;
 }
 

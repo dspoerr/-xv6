@@ -45,10 +45,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-  p->sharedPagesUsed[0] = 0;
-  p->sharedPagesUsed[1] = 0;
-  p->sharedPagesUsed[2] = 0;
-  p->sharedPagesUsed[3] = 0;
+
   p->sharedPageCount = 0;
   release(&ptable.lock);
 
@@ -58,7 +55,7 @@ found:
     return 0;
   }
   sp = p->kstack + KSTACKSIZE;
-  
+
   // Leave room for trap frame.
   sp -= sizeof *p->tf;
   p->tf = (struct trapframe*)sp;

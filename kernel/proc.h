@@ -74,8 +74,7 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
-  int sharedPageCount;	       // Refers to the amt of pages a process has
-  int sharedPagesUsed[4];      // Array that tells which shared pages are in use
+  int sharedPageCount;	       // Refers to the amt of shmem pages a process has
 };
 
 // Process memory is laid out contiguously, low addresses first:

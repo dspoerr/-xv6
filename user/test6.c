@@ -14,7 +14,6 @@ int main()
 	char *ptr;
 	int i;
 	char arr[8] = "COP4610";
-	printf(1, "BREAKPOINT 1 \n");
 	ptr = shmem_access(2);
 	if(ptr == NULL)
 	{
@@ -22,7 +21,6 @@ int main()
 		printf(1, "TEST FAILED");
 		exit();
 	}
-	printf(1, "BREAKPOINT 2 \n");
 	int pid = fork();
 	if(pid < 0)
 	{
@@ -30,14 +28,11 @@ int main()
 		printf(1, "TEST FAILED");
 		exit();
 	}
-	//printf(1, "BREAKPOINT 3 \n");
 	else if(pid == 0)
 	{
-		printf(1, "BREAKPOINT 3 \n");
 		sleep(20);
 		for(i=0; i<7; i++)
 		{
-			printf(1, "BREAKPOINT 4 \n");
 			if(*(ptr+i) != arr[i])
 			{
 				INFO();	
@@ -49,7 +44,6 @@ int main()
 	}
 	else
 	{
-		printf(1, "BREAKPOINT 5 \n");
 		for(i=0; i<7; i++)
 		{
 			*(ptr+i) = arr[i];

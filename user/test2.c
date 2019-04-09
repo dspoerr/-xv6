@@ -14,21 +14,19 @@ int main()
 {
 	void* ptr;
 	ptr = shmem_access(2);
-        printf(1, "BREAKPOINT 1 \n");
 	if(ptr == NULL)
 	{
 		INFO();
 		printf(1, "TEST FAILED");
 		exit();
 	}
-        printf(1, "BREAKPOINT 2 \n");
 	if(((int) ptr) != USERTOP - PGSIZE*1)
 	{
 		INFO();
 		printf(1, "TEST FAILED");
 		exit();
 	}
-        printf(1, "BREAKPOINT 3 \n");
+
 	ptr = shmem_access(3);
 	if(ptr == NULL)
 	{
@@ -36,27 +34,25 @@ int main()
 		printf(1, "TEST FAILED");
 		exit();
 	}
-        printf(1, "BREAKPOINT 4 \n");
 	if(((int) ptr) != USERTOP - PGSIZE*2)
 	{
 		INFO();
 		printf(1, "TEST FAILED");
 		exit();
 	}
-        printf(1, "BREAKPOINT 5 \n");
+
 	ptr = shmem_access(0);
 	if(ptr == NULL)
 	{
 		INFO();
 		printf(1, "TEST FAILED");
 	}
-        printf(1, "BREAKPOINT 6 \n");
 	if(((int) ptr) != USERTOP - PGSIZE*3)
 	{
 		INFO();
 		printf(1, "TEST FAILED");
 	}
-        printf(1, "BREAKPOINT 6 \n");
+
 	ptr = shmem_access(1);
 	if(ptr == NULL)
 	{
